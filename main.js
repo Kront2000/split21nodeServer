@@ -1,5 +1,5 @@
 import http from 'http'
-import { getGroqChatCompletion } from './grok.js'
+import getAction from './getAction.js'
 
 const server = http.createServer(async (req, res) => {
     try {
@@ -9,21 +9,27 @@ const server = http.createServer(async (req, res) => {
             data.push(chunk)
         })
         req.on("end", async () => {
-            data = await Buffer.concat(data).toString()
-            data = await JSON.parse(data)
-            console.log(data)
-            let message = await getGroqChatCompletion(data.historyOfGame, data.historyOfVictories, data.score);
-            if (message) {
-                res.write(message.choices[0]?.message?.content || "");
+            try {
+                data = await Buffer.concat(data).toString()
+                data = await JSON.parse(data)
+                if (!data.historyOfGame || data.historyOfVictories == undefined || !data.score) {
+                    throw new Error("Not all parameters are specified in the request.")
+                }
+                let result = await getAction(data.historyOfGame, data.historyOfVictories, data.score);
+                result = await JSON.stringify(result)
+                res.write(result);
                 res.end()
-            } else {
-                res.write("error");
+            } catch (err) {
+                res.statusCode = 400;
+                console.log("Bad request " + err.message)
+                res.statusMessage = "Bad request " + err.message
                 res.end()
             }
-
         })
     } catch (err) {
-        console.log('error: ', err + '\n\n' + req.headers + '\n\n' + req.body);
+        res.statusCode = 500;
+        res.statusMessage = err.message
+        res.end
     }
 }).listen(8080)
 

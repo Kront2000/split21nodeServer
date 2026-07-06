@@ -36,32 +36,23 @@ export async function getGroqChatCompletion(gameHistory, historyOfVictories, sco
 
   const userPrompt = `Текущая ситуация:
 Твоя текущая сумма очков: ${score}
-
 Ход игры (логи):
 ${gameHistory}
-
 История предыдущих игр:
 ${JSON.stringify(historyOfVictories)}
-
 Твой ход! Выдай JSON.`;
 
-  try {
-    return groq.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: userPrompt
-        }
-      ],
-      model: "openai/gpt-oss-20b",
-    });
-  }catch{
-    return null;
-  }
-
-  
+  return groq.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content: systemPrompt
+      },
+      {
+        role: "user",
+        content: userPrompt
+      }
+    ],
+    model: "openai/gpt-oss-20b",
+  });
 }
