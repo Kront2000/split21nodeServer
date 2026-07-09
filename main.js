@@ -1,35 +1,21 @@
-import http from 'http'
-import getAction from './getAction.js'
+import express from 'express'
+import { enemyRouter } from './app/routes/enemy.route.js'
 
-const server = http.createServer(async (req, res) => {
-    try {
-        res.setHeader("Access-Control-Allow-Origin", "*")
-        let data = []
-        req.on("data", (chunk) => {
-            data.push(chunk)
-        })
-        req.on("end", async () => {
-            try {
-                data = await Buffer.concat(data).toString()
-                data = await JSON.parse(data)
-                if (!data.historyOfGame || data.historyOfVictories == undefined || !data.score) {
-                    throw new Error("Not all parameters are specified in the request.")
-                }
-                let result = await getAction(data.historyOfGame, data.historyOfVictories, data.score);
-                result = await JSON.stringify(result)
-                res.write(result);
-                res.end()
-            } catch (err) {
-                res.statusCode = 400;
-                console.log("Bad request " + err.message)
-                res.statusMessage = "Bad request " + err.message
-                res.end()
-            }
-        })
-    } catch (err) {
-        res.statusCode = 500;
-        res.statusMessage = err.message
-        res.end
-    }
-}).listen(8080)
+const app = express()
+const PORT = 8080
 
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
+
+app.use((req, res, next) => {
+    console.log("Запрос")
+    res.set({ "Access-Control-Allow-Origin": "*" })
+    next()
+})
+
+app.use('/enemy', enemyRouter)
+
+
+app.listen(PORT, () => {
+    console.log("Сервер запущен...")
+})

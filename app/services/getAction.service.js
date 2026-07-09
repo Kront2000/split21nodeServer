@@ -1,4 +1,4 @@
-import { getGroqChatCompletion } from "./groq.js"
+import { getGroqChatCompletion } from "./groq.service.js"
 
 export default async function getAction(gameHistory, historyOfVictories, score) {
 
@@ -8,6 +8,7 @@ export default async function getAction(gameHistory, historyOfVictories, score) 
         result = await result.match(/\{.+\}/s)
         result = await JSON.parse(result)
         if (!result.event || result.message == undefined || result.messageForLongAFK == undefined) {
+            console.log(result)
             throw new Error("The AI ​​generated incorrect data.")
         }
         return result;
