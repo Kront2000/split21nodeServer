@@ -1,11 +1,16 @@
 import express from 'express'
-import { enemyRouter } from './app/routes/enemy.route.js'
+import { enemyRoute } from './app/routes/enemy.route.js'
+import { authRoute } from './app/routes/authorization.route.js'
+import { userRoutes } from './app/routes/user.route.js'
+import cookieParser from 'cookie-parser'
 
 const app = express()
 const PORT = 8080
+let secret = 'qwerty';
 
-app.use(express.json()); 
-app.use(express.urlencoded({ extended: true })); 
+app.use(cookieParser(secret));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
     console.log("Запрос")
@@ -13,7 +18,9 @@ app.use((req, res, next) => {
     next()
 })
 
-app.use('/enemy', enemyRouter)
+app.use('/enemy', enemyRoute)
+app.use('/auth', authRoute)
+app.use('/user', userRoutes)
 
 
 app.listen(PORT, () => {
