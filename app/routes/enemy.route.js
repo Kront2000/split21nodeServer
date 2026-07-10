@@ -3,7 +3,7 @@ import getAction from '../services/getAction.service.js';
 
 export const enemyRoute = express.Router()
 
-enemyRoute.get('/', async (req, res) => {
+enemyRoute.post('/', async (req, res) => {
     try {
         if (req.body && req.body.historyOfGame && req.body.historyOfVictories != undefined && req.body.score) {
             let result = await getAction(req.body.historyOfGame, req.body.historyOfVictories, req.body.score);
