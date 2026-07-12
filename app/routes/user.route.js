@@ -1,5 +1,6 @@
 import express from 'express'
 import * as jwt from '../services/authorization/jwt.service.js'
+import { userScoreRoute } from './userScore.route.js'
 
 export const userRoutes = express.Router()
 
@@ -18,3 +19,5 @@ userRoutes.get("/", (req, res) => {
         res.send("server error")
     }
 })
+
+userRoutes.use("/score", userScoreRoute)
