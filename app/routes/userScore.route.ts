@@ -1,5 +1,5 @@
 import express from 'express'
-import { pool } from '../database/pool.js'
+import { pool } from '../lib/pool.js'
 
 export const userScoreRoute = express.Router()
 

@@ -1,6 +1,6 @@
 import express from 'express'
 import * as jwt from '../services/authorization/jwt.service'
-import { pool } from '../database/pool'
+
 
 export const authRoute = express.Router()
 
