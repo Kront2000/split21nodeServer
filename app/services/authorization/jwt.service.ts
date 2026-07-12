@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config()
 
 interface PayLoad {
-    id: string,
+    id: number,
     login: string,
 }
 
