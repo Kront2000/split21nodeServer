@@ -8,8 +8,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon main.js",
-    "seed": "SEED=true node app/database/pool.js"
+    "dev": "nodemon",
+    "seed": "SEED=true node app/database/pool.ts"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
@@ -19,9 +19,16 @@
     "pg": "^8.22.0"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.1",
+    "@types/pg": "^8.20.0",
     "nodemon": "^3.1.14",
-    "typescript": "^7.0.2"
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.0",
+    "typescript": "^5.5.4"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

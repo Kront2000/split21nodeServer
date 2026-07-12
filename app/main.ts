@@ -1,7 +1,8 @@
 import express from 'express'
-import { enemyRoute } from './app/routes/enemy.route.js'
-import { authRoute } from './app/routes/authorization.route.js'
-import { userRoutes } from './app/routes/user.route.js'
+import { authRoute } from './routes/authorization.route.js'
+import { enemyRoute } from './routes/enemy.route'
+
+import { userRoutes } from './routes/user.route'
 import cookieParser from 'cookie-parser'
 
 const app = express()

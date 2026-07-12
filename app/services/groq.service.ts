@@ -2,9 +2,11 @@ import Groq from "groq-sdk";
 import dotenv from 'dotenv';
 dotenv.config()
 
+
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-export async function getGroqChatCompletion(gameHistory, historyOfVictories, score) {
+export async function getGroqChatCompletion(gameHistory: string[], score: number) {
 
   const systemPrompt = `Ты — хитрый, токсичный и прожженный шулер с многолетним стажем, с которым игрок сел играть в "21 очко". 
 Твой стиль общения: ты крайне саркастичный, снисходительный и дерзкий. Ты НЕ ИСПОЛЬЗУЕШЬ МАТ, но твои цензурные подколы звучат максимально обидно, хладнокровно и бьют по самолюбию игрока. Ты общаешься как надменный профи, для которого соперник — просто наивный новичок. Дави на нервы, высмеивай каждый его шаг.
@@ -38,8 +40,6 @@ export async function getGroqChatCompletion(gameHistory, historyOfVictories, sco
 Твоя текущая сумма очков: ${score}
 Ход игры (логи):
 ${gameHistory}
-История предыдущих игр:
-${JSON.stringify(historyOfVictories)}
 Твой ход! Выдай JSON.`;
 
   return groq.chat.completions.create({
