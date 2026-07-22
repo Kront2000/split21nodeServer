@@ -1,8 +1,13 @@
 # split21nodeServer
 
-Server for the [split21react](https://github.com/Kront2000/split21react) project. The server is built with Express to learn Node.js. 
-1. It proxies requests to the GROQ API and returns the response.
-2. It handles basic authorization.
+Server for the [split21react](https://github.com/Kront2000/split21react) project. Built with Express and TypeScript to learn Node.js development.
+
+## Features
+
+1. **JWT Authentication** - Secure player authentication with JWT tokens
+2. **GROQ API Proxy** - Proxies requests to the GROQ API and returns responses
+3. **Game Logic** - Server-side game logic for the split21 game
+4. **Prisma ORM** - Database management with Prisma ORM
 
 ## Endpoints
 
@@ -30,25 +35,40 @@ Server for the [split21react](https://github.com/Kront2000/split21react) project
   - Response: Enemy action as JSON
   - Status codes: 200 (success), 400 (missing parameters), 500 (server error)
 
-## Launch
+## Setup & Launch
 
 1. Clone the repository
- ```
- git clone https://github.com/Kront2000/split21nodeServer
- ```
-2. install dependencies
- ```
- npm install
- ```
+```bash
+git clone https://github.com/Kront2000/split21nodeServer
+```
+
+2. Install dependencies
+```bash
+npm install
+```
+
 3. Set environment variables
 ```
-GROQ_API_KEY=
-SECRET_KEY=RANDOM_KEY
+GROQ_API_KEY=your_groq_api_key
+SECRET_KEY=your_random_secret_key
 ```
-You can get the GROQ_API_KEY on the website: [GROQ](https://console.groq.com/keys)
+You can get the GROQ_API_KEY on the website: [GROQ Console](https://console.groq.com/keys)
 
-4. Run
-   
+4. Setup Prisma (if not already initialized)
+```bash
+npx prisma migrate dev
 ```
+
+5. Run the development server
+```bash
 npm run dev
 ```
+
+## Tech Stack
+
+- **Runtime**: Node.js
+- **Language**: TypeScript
+- **Framework**: Express.js
+- **Database ORM**: Prisma
+- **Authentication**: JWT (JSON Web Tokens)
+- **API Integration**: GROQ API
