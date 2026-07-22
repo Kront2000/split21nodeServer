@@ -1,20 +1,9 @@
-import { SessionObject, sessionMap, Card } from "./gameSession.service";
-
+import { SessionObject, sessionMap } from "./gameSession.service";
 import getAction from "../getAction.service";
 import WebSocket from "ws";
+import * as userService from "./../user/user.service"
 
 type Event = "take" | "pass"
-
-interface MadeStepResponse {
-    enemyEvent?: Event,
-    win?: "none" | "user" | "enemy",
-    winMessage?: string,
-    userDeck?: Card[],
-    takeCard?: Card,
-    countOfDeckEnemy?: number,
-    enemyMessage?: string,
-    whoseTurn?: string,
-}
 
 export function startGame(playerWebSocketId: number, ws: WebSocket): void {
     if (sessionMap.size < 1 || !sessionMap.has(playerWebSocketId)) {
@@ -35,30 +24,40 @@ export function startGame(playerWebSocketId: number, ws: WebSocket): void {
     ws.send(JSON.stringify({
         takeCard: card,
         whoseTurn: "user",
+        userDeck: sessionObject.cardsOfUser,
         countOfDeckEnemy: sessionObject.cardsOfEnemy.length
     }))
 }
 
-export async function madeStep(event: Event, playerWebSocketId: number, ws: WebSocket): Promise<void> {
+export async function madeStep(event: Event, playerWebSocketId: number, ws: WebSocket, playerId: number | undefined): Promise<void> {
     const sessionObject = sessionMap.get(playerWebSocketId)
     if (!sessionObject) {
-        throw Error("error")
+        throw Error("Данная сессия не найдена")
     }
     sessionObject.setWhoseTurn("enemy")
     ws.send(JSON.stringify({ whoseTurn: "enemy" }))
     if (event == "take") {
         const card = sessionObject.userTakeCard()
+        ws.send(JSON.stringify({
+            takeCard: card,
+            userDeck: sessionObject.cardsOfUser,
+        }))
         sessionObject.setHistoryOfGame("Пользователь взял карту")
         if (sessionObject.cardsOfUser.reduce((prev, curr) => { return prev += curr.value }, 0) > 21) {
+            sessionObject.setHistoryOfGame("Игрок набрал больше 21-го очка. Игрок проиграл")
+            const finalRes = await getAction(sessionObject.historyOfGame, sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0))
             ws.send(JSON.stringify({
+                enemyMessage: finalRes.message,
                 win: "enemy",
                 winMessage: "Вы набрали больше чем 21 очко. Вы проиграли :("
             }))
+            if (playerId) {
+                userService.clearScoreById(playerId)
+            }
             sessionMap.delete(playerWebSocketId)
         } else {
             if (sessionObject.enemyIsPass) {
                 ws.send(JSON.stringify({
-                    win: "none",
                     takeCard: card,
                     userDeck: sessionObject.cardsOfUser,
                     countOfDeckEnemy: sessionObject.cardsOfEnemy.length
@@ -69,10 +68,16 @@ export async function madeStep(event: Event, playerWebSocketId: number, ws: WebS
                     const card = sessionObject.enemyTakeCard()
                     ws.send(JSON.stringify({ enemyMessage: res.message }))
                     if (sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0) > 21) {
+                        sessionObject.setHistoryOfGame("Противник набрал больше 21-го очка. Игрок выйграл")
+                        const finalRes = await getAction(sessionObject.historyOfGame, sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0))
                         ws.send(JSON.stringify({
+                            enemyMessage: finalRes.message,
                             win: "user",
                             winMessage: "Противник набрал больше 21-го очка. Вы выйграли!! :)"
                         }))
+                        if (playerId) {
+                            userService.incrementScoreById(playerId)
+                        }
                         sessionMap.delete(playerWebSocketId)
                     } else {
                         sessionObject.setHistoryOfGame(`Противник получает карту ${card.suit} ${card.name}`)
@@ -91,16 +96,28 @@ export async function madeStep(event: Event, playerWebSocketId: number, ws: WebS
         sessionObject.setHistoryOfGame("Игрок пасс")
         if (sessionObject.enemyIsPass) {
             if (sessionObject.cardsOfUser.reduce((prev, curr) => { return prev += curr.value }, 0) > sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0)) {
+                sessionObject.setHistoryOfGame("Игрок набрал больше очков чем у противника. Игрок выйграл")
+                const finalRes = await getAction(sessionObject.historyOfGame, sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0))
                 ws.send(JSON.stringify({
+                    enemyMessage: finalRes.message,
                     win: "enemy",
-                    winMessage: "Вы набрали больше очко чем противник. Вы выйграли :)"
+                    winMessage: "Вы набрали больше очков чем противник. Вы выйграли :)"
                 }))
+                if (playerId) {
+                    userService.incrementScoreById(playerId)
+                }
                 sessionMap.delete(playerWebSocketId)
             } else {
+                sessionObject.setHistoryOfGame("Противник набрал больше очков чем игрок. Игрок проиграл")
+                const finalRes = await getAction(sessionObject.historyOfGame, sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0))
                 ws.send(JSON.stringify({
+                    enemyMessage: finalRes.message,
                     win: "enemy",
                     winMessage: "Противник набрал больше очко чем вы. Вы проиграли :("
                 }))
+                if (playerId) {
+                    userService.clearScoreById(playerId)
+                }
                 sessionMap.delete(playerWebSocketId)
             }
         } else {
@@ -109,29 +126,48 @@ export async function madeStep(event: Event, playerWebSocketId: number, ws: WebS
                 const card = sessionObject.enemyTakeCard()
                 ws.send(JSON.stringify({ enemyMessage: res.message }))
                 if (sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0) > 21) {
+                    sessionObject.setHistoryOfGame("Противник набрал больше 21-го очка. Игрок выйграл")
+                    const finalRes = await getAction(sessionObject.historyOfGame, sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0))
                     ws.send(JSON.stringify({
+                        enemyMessage: finalRes.message,
                         win: "user",
                         winMessage: "Противник набрал больше 21-го очка. Вы выйграли!! :)"
                     }))
+                    if (playerId) {
+                        userService.incrementScoreById(playerId)
+                    }
                     sessionMap.delete(playerWebSocketId)
                 } else {
                     ws.send(JSON.stringify({
                         enemyEvent: "take",
-                        countOfDeckEnemy: sessionObject.cardsOfEnemy
+                        countOfDeckEnemy: sessionObject.cardsOfEnemy.length
                     }))
+                    await setTimeout(() => { madeStep("pass", playerWebSocketId, ws, playerId) }, 3000)
                 }
             } else if (res.event == "pass") {
                 if (sessionObject.cardsOfUser.reduce((prev, curr) => { return prev += curr.value }, 0) > sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0)) {
+                    sessionObject.setHistoryOfGame("Игрок набрал больше очков чем у противника. Игрок выйграл")
+                    const finalRes = await getAction(sessionObject.historyOfGame, sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0))
                     ws.send(JSON.stringify({
+                        enemyMessage: finalRes.message,
                         win: "user",
                         winMessage: "Вы набрали больше очко чем противник. Вы выйграли :)"
                     }))
+                    if (playerId) {
+                        userService.incrementScoreById(playerId)
+                    }
                     sessionMap.delete(playerWebSocketId)
                 } else {
+                    sessionObject.setHistoryOfGame("Противник набрал больше очков чем игрок. Игрок проиграл")
+                    const finalRes = await getAction(sessionObject.historyOfGame, sessionObject.cardsOfEnemy.reduce((prev, curr) => { return prev += curr.value }, 0))
                     ws.send(JSON.stringify({
+                        enemyMessage: finalRes.message,
                         win: "enemy",
                         winMessage: "Противник набрал больше очко чем вы. Вы проиграли :("
                     }))
+                    if (playerId) {
+                        userService.clearScoreById(playerId)
+                    }
                     sessionMap.delete(playerWebSocketId)
                 }
             }

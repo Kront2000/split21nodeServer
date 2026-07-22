@@ -23,7 +23,6 @@ export function verifyToken(token: string) {
         throw new Error("The SECRET_KEY environment variable is not set.")
     }
     if (typeof token !== "string") {
-        console.log("de")
         return false
     }
     let parts = token.split('.')
@@ -33,7 +32,7 @@ export function verifyToken(token: string) {
     if (crypto.createHmac("sha256", process.env.SECRET_KEY).update(`${parts[0]}.${parts[1]}`).digest("base64url") !== parts[2]) {
         return false
     } else {
-        return decode(parts[1])
+        return JSON.parse(decode(parts[1])) as PayLoad
     }
 }
 

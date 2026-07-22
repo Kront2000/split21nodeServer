@@ -1,9 +1,10 @@
 import express from 'express'
 import { authRoute } from './routes/authorization.route.js'
 import { enemyRoute } from './routes/enemy.route'
-
+import { startWebSocket } from './routes/webSocket.js'
 import { userRoutes } from './routes/user.route'
 import cookieParser from 'cookie-parser'
+import http from 'http'
 
 const app = express()
 const PORT = 8080
@@ -26,6 +27,10 @@ app.use('/auth', authRoute)
 app.use('/user', userRoutes)
 
 
-app.listen(PORT, () => {
+export const server = http.createServer(app);
+
+server.listen(PORT, () => {
     console.log("Сервер запущен...")
 })
+
+startWebSocket();

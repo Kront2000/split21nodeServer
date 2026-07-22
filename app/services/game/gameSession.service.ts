@@ -39,7 +39,7 @@ export class SessionObject {
         this.userIsPass = false
         this.enemyIsPass = false
         this.mainDeck = []
-        this.mainDeck = deck
+        this.mainDeck = deck.slice()
     }
     enemyTakeCard() {
         let index = randomaizer(0, this.mainDeck.length - 1);
