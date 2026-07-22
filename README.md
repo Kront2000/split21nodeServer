@@ -8,6 +8,7 @@ Server for the [split21react](https://github.com/Kront2000/split21react) project
 2. **GROQ API Proxy** - Proxies requests to the GROQ API and returns responses
 3. **Game Logic** - Server-side game logic for the split21 game
 4. **Prisma ORM** - Database management with Prisma ORM
+5. **WebSocket Support** - Real-time game communication
 
 ## Endpoints
 
@@ -35,6 +36,72 @@ Server for the [split21react](https://github.com/Kront2000/split21react) project
   - Response: Enemy action as JSON
   - Status codes: 200 (success), 400 (missing parameters), 500 (server error)
 
+### 4. **WebSocket Connection** (`ws://localhost:8080`)
+- **Connection**: Establish WebSocket connection with optional JWT token
+  - URL: `ws://localhost:8080?token=YOUR_JWT_TOKEN` (optional)
+  - Initial Response: `{ whoseTurn: "start" }`
+
+#### WebSocket Events:
+
+**Client → Server:**
+- **"start"**: Initialize new game
+  ```json
+  { "event": "start" }
+  ```
+  
+- **"take"**: Player takes a card
+  ```json
+  { "event": "take" }
+  ```
+  
+- **"pass"**: Player passes turn
+  ```json
+  { "event": "pass" }
+  ```
+
+**Server → Client:**
+- **Game Start Response**:
+  ```json
+  {
+    "takeCard": { "name": "6", "suit": "♠", "value": 6 },
+    "whoseTurn": "user",
+    "userDeck": [ /* player's cards */ ],
+    "countOfDeckEnemy": 1
+  }
+  ```
+
+- **After Player Action**:
+  ```json
+  {
+    "whoseTurn": "enemy",
+    "takeCard": { /* new card */ },
+    "userDeck": [ /* updated deck */ ],
+    "countOfDeckEnemy": 2
+  }
+  ```
+
+- **Enemy Action**:
+  ```json
+  {
+    "enemyEvent": "take",
+    "enemyMessage": "Enemy takes a card",
+    "countOfDeckEnemy": 3,
+    "whoseTurn": "user"
+  }
+  ```
+
+- **Game Result**:
+  ```json
+  {
+    "win": "user",
+    "winMessage": "You won! Enemy busted!",
+    "enemyMessage": "Message from AI"
+  }
+  ```
+
+**Connection Close**:
+When WebSocket connection is closed, the game session is automatically cleaned up.
+
 ## Setup & Launch
 
 1. Clone the repository
@@ -51,6 +118,7 @@ npm install
 ```
 GROQ_API_KEY=your_groq_api_key
 SECRET_KEY=your_random_secret_key
+DATABASE_URL=your_database_url
 ```
 You can get the GROQ_API_KEY on the website: [GROQ Console](https://console.groq.com/keys)
 
@@ -71,4 +139,5 @@ npm run dev
 - **Framework**: Express.js
 - **Database ORM**: Prisma
 - **Authentication**: JWT (JSON Web Tokens)
+- **Real-time Communication**: WebSocket (ws library)
 - **API Integration**: GROQ API
