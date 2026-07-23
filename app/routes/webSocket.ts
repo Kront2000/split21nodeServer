@@ -1,13 +1,7 @@
 import WebSocket, { WebSocketServer } from 'ws';
-import * as game from "../services/game/game.service"
-import { sessionMap } from './../services/game/gameSession.service';
+import * as gameService from "../services/game/game.service"
 import * as jwt from "./../services/authorization/jwt.service"
 import { server } from './../main'
-
-
-function getRandomInt(max: number) {
-  return Math.floor(Math.random() * (Math.pow(10, max)))
-}
 
 function onSocketError(err: any) {
   console.error(err);
@@ -24,15 +18,12 @@ export function startWebSocket() {
   const wss = new WebSocketServer({ noServer: true });
   console.log("Вебсокет сервер запущен...")
   wss.on('connection', (ws, req,) => {
-    let playerId: number | undefined
+    let playerId: number | null
     if (req.url && req.url.split('token=')[1]) {
+      console.log(jwt.verifyToken(req.url.split('token=')[1]))
       let payload = jwt.verifyToken(req.url.split('token=')[1])
-      if (payload) {
-        playerId = payload.id
-      }
+      playerId = payload ? payload.id : null
     }
-    const index = getRandomInt(10);
-    webSocketMap.set(index, { playerId: playerId, ws: ws });
     ws.send(JSON.stringify({ whoseTurn: "start" }))
 
     ws.on('message', (message) => {
@@ -40,20 +31,18 @@ export function startWebSocket() {
         const parsedMessage = JSON.parse(String(message))
         if (!parsedMessage.event) {
           throw Error("invalidate data")
-        } else if (parsedMessage.event === "start") {
-          game.startGame(index, ws)
-        } else {
-          game.madeStep(parsedMessage.event, index, ws, playerId)
         }
-
+        if (parsedMessage.event === "start") {
+          gameService.startGame(ws, playerId)
+        } else {
+          gameService.madeStep(ws, parsedMessage.event)
+        }
       } catch (err) {
         console.log(err)
       }
-
     });
-
     ws.on('close', () => {
-      sessionMap.delete(index)
+      gameService.deleteRoom(ws)
     });
   });
 
