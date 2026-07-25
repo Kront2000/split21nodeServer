@@ -19,10 +19,12 @@ export function startWebSocket() {
   console.log("Вебсокет сервер запущен...")
   wss.on('connection', (ws, req,) => {
     let playerId: number | null
+
     if (req.url && req.url.split('token=')[1]) {
       console.log(jwt.verifyToken(req.url.split('token=')[1]))
       let payload = jwt.verifyToken(req.url.split('token=')[1])
       playerId = payload ? payload.id : null
+      console.log(playerId)
     }
     ws.send(JSON.stringify({ whoseTurn: "start" }))
 

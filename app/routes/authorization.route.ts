@@ -7,17 +7,16 @@ export const authRoute = express.Router()
 
 authRoute.post("/register", async (req, res) => {
     try {
-        console.log(req.body)
         if (!req.body) {
             res.status(400)
             return res.end("Incorrect data")
-        } else if (!req.body.login) {
+        } else if (!req.body.login || req.body.login.length < 4) {
             res.status(400)
-            return res.end("Login is missing")
-        } else if (!req.body.password) {
+            return res.end("The login is missing or shorter than 4 characters")
+        } else if (!req.body.password || req.body.login.length < 8) {
             res.status(400)
-            return res.end("Password is missing")
-        }
+            return res.end("Password is missing or less than 8 characters long")
+        } 
 
         const user = await userService.createUser(req.body.login, req.body.password)
         if (user === null) {
@@ -26,8 +25,9 @@ authRoute.post("/register", async (req, res) => {
         }
         const token = jwt.getToken({ id: user.id, login: user.login })
         res.cookie('accessToken', token, {
-            httpOnly: true,
-            secure: true
+            secure: false, 
+            sameSite: 'lax',
+            path: "/"
         });
         return res.send("Registration was successful.");
     } catch (err) {
@@ -51,7 +51,6 @@ authRoute.post("/login", async (req, res) => {
         }
         const token = jwt.getToken({ id: user.id, login: user.login })
         res.cookie('accessToken', token, {
-            httpOnly: true,
             secure: true
         });
         return res.send("Login was successful.");

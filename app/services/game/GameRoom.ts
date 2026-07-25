@@ -68,16 +68,17 @@ export default class GameRoom {
 
     async startGame() {
         if (!this.hasStart) {
+            this.hasStart = true
             let card = this.enemyTakeCard();
             this.setHistoryOfGame("Начало игры");
             this.setHistoryOfGame(`Противник получил - ${card.name} ${card.suit}`)
             card = this.userTakeCard();
-            this.ws.send(JSON.stringify({
+            this.send({
                 takeCard: card,
                 whoseTurn: "user",
                 userDeck: this.cardsOfUser,
                 countOfDeckEnemy: this.cardsOfEnemy.length
-            }))
+            })
         }
     }
 
@@ -85,14 +86,15 @@ export default class GameRoom {
         let index = randomaizer(0, this.mainDeck.length - 1);
         const card = this.mainDeck[index]
         this.addCardToEnemyDeck(this.mainDeck[index]);
-        this.deleteCardFromMainDeck(index);
+        this.mainDeck.splice(index, 1)
         return card
     }
+    //КОСЯК
     userTakeCard() {
         let index = randomaizer(0, this.mainDeck.length - 1);
         const card = this.mainDeck[index]
         this.addCardToUserDeck(this.mainDeck[index]);
-        this.deleteCardFromMainDeck(index);
+        this.mainDeck.splice(index, 1)
         return card
     }
     setUserIsPass() {
@@ -126,18 +128,19 @@ export default class GameRoom {
         this.ws.send(JSON.stringify({
             enemyMessage: finalRes.message,
             win: who,
-            winMessage: "Вы набрали больше чем 21 очко. Вы проиграли :("
+            winMessage: message
         }))
         if (this.playerId && who == 'enemy') {
             userService.clearScoreById(this.playerId)
         } else if (this.playerId && who == 'user') {
             userService.incrementScoreById(this.playerId)
         }
+        console.log(this.cardsOfEnemy)
         gameRoomMap.delete(this.ws)
     }
 
-    async send(props: SendMessage) {
-        this.ws.send(JSON.stringify(props))
+    send(props: SendMessage) {
+        this.ws.send(JSON.stringify({countMainDeck: this.mainDeck.length, ...props}))
     }
 
     async madeStep(event: Event): Promise<void> {
@@ -146,30 +149,32 @@ export default class GameRoom {
         this.ws.send(JSON.stringify({ whoseTurn: "enemy" }))
         if (event == "take") {
             const card = this.userTakeCard()
-            this.ws.send(JSON.stringify({ takeCard: card, userDeck: this.cardsOfUser, }))
+            this.send({ takeCard: card, userDeck: this.cardsOfUser, })
             this.setHistoryOfGame("Пользователь взял карту")
             if (this.valueOfUserDeck > 21) {
                 this.setHistoryOfGame("Игрок набрал больше 21-го очка. Игрок проиграл")
+                this.win("enemy", "Вы набрали больше 21-го очка. Вы проиграли :("); return;
+
 
 
             } else {
                 if (this.enemyIsPass) {
-                    this.ws.send(JSON.stringify({ takeCard: card, userDeck: this.cardsOfUser, countOfDeckEnemy: this.cardsOfEnemy.length }))
+                    this.send({ takeCard: card, userDeck: this.cardsOfUser, countOfDeckEnemy: this.cardsOfEnemy.length })
                 } else {
                     const res = await getAction(this.historyOfGame, this.valueOfEnemyDeck)
                     if (res.event == "take" && !this.enemyIsPass) {
                         const card = this.enemyTakeCard()
-                        this.ws.send(JSON.stringify({ enemyMessage: res.message }))
+                        this.send({ enemyMessage: res.message })
                         if (this.valueOfEnemyDeck > 21) {
                             this.setHistoryOfGame("Противник набрал больше 21-го очка. Игрок выйграл")
                             this.win("user", "Противник набрал больше 21-го очка. Вы выйграли!! :)")
                         } else {
                             this.setHistoryOfGame(`Противник получает карту ${card.suit} ${card.name}`)
                             this.setWhoseTurn('user')
-                            this.ws.send(JSON.stringify({ enemyEvent: "take", countOfDeckEnemy: this.cardsOfEnemy.length, whoseTurn: 'user' }))
+                            this.send({ enemyEvent: "take", countOfDeckEnemy: this.cardsOfEnemy.length, whoseTurn: 'user' })
                         }
                     } else {
-                        this.ws.send(JSON.stringify({ enemyEvent: "pass", enemyMessage: res.message, whoseTurn: "user" }))
+                        this.send({ enemyEvent: "pass", enemyMessage: res.message, whoseTurn: "user" })
                         this.setEnemyIsPass()
                         this.setWhoseTurn("user")
                     }
@@ -189,14 +194,14 @@ export default class GameRoom {
             } else {
                 const res = await getAction(this.historyOfGame, this.valueOfEnemyDeck)
                 if (res.event == "take") {
-                    const card = this.enemyTakeCard()
-                    this.ws.send(JSON.stringify({ enemyMessage: res.message }))
+                    this.enemyTakeCard()
+                    this.send({ enemyMessage: res.message })
                     if (this.valueOfEnemyDeck > 21) {
                         this.setHistoryOfGame("Противник набрал больше 21-го очка. Игрок выйграл")
                         this.win("user", "Противник набрал больше 21-го очка. Вы выйграли!! :)")
                     } else {
-                        this.ws.send(JSON.stringify({ enemyEvent: "take", countOfDeckEnemy: this.cardsOfEnemy.length }))
-                        await setTimeout(() => { this.madeStep("pass") }, 3000)
+                        this.send({ enemyEvent: "take", countOfDeckEnemy: this.cardsOfEnemy.length })
+                        setTimeout(() => { this.madeStep("pass") }, 3000)
                     }
                 } else if (res.event == "pass") {
                     if (this.valueOfUserDeck > this.valueOfEnemyDeck) {

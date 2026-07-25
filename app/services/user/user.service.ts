@@ -1,6 +1,18 @@
 import { prisma } from './../../lib/prisma'
 import * as jwt from '../authorization/jwt.service'
 
+export async function getUserData(id: number) {
+    const resp = await prisma.users.findUnique({
+        where: {id: id},
+        select: {
+            id: true,
+            login: true,
+            score: true
+        }
+    })
+    return resp
+}
+
 export async function getUserByLogin(login: string) {
     const resp = await prisma.users.findUnique({
         where: { login: login }
@@ -28,7 +40,8 @@ export async function getTop10() {
             id: true,
             login: true,
             score: true
-        }
+        },
+        take: 10
     })
     return resp
 }
