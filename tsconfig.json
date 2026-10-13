@@ -2,7 +2,7 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "module": "ESNext",
+    "module": "preserve",
     "moduleResolution": "bundler",
     "target": "ES2023",
     "esModuleInterop": true,
@@ -10,6 +10,12 @@
     "rootDir": "./",
     "outDir": "./dist",
     "strict": true,
+    "resolveJsonModule": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "types": [
+      "node"
+    ],
   },
   "include": [
     "/**/*.ts"
