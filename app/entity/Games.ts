@@ -7,7 +7,7 @@ export enum GameType {
     PVP = "pvp",
 }
 
-export enum Status {
+export enum STATUS {
     IN_PROGRESS = "in_progress",
     FINISHED = "finished",
     ABANDONED = "abandoned"
@@ -33,8 +33,8 @@ export class Games {
     @JoinColumn({ name: "winner_id" })
     winner_id!: Relation<Users>
 
-    @Column({type: "enum", enum: Status, default: Status.IN_PROGRESS})
-    status!: Relation<Status>
+    @Column({type: "enum", enum: STATUS, default: STATUS.IN_PROGRESS})
+    status!: Relation<STATUS>
 
     @Column({type: "smallint", default: 0})
     player1_score!: number

@@ -1,34 +1,65 @@
-import { Event } from "./GameRoom"
-import WebSocket from "ws";
-import GameRoom from "./GameRoom";
+import { DeepPartial } from "typeorm"
+import AppDataSource from "../../AppDataSource"
+import { ACTION, GameMoves } from "../../entity/GameMoves"
+import { Games, GameType, STATUS } from "../../entity/Games"
+import { Users } from "../../entity/Users"
 
-export const gameRoomMap = new Map<WebSocket, GameRoom>()
+export async function createGame(player1_id: number, player2_id: number, type: "ai" | "pvp", player1_score: number, player2_score: number) {
+    const repository = AppDataSource.getRepository(Games)
+    if (player2_id !== 0) {
+        const game = repository.create({
+            player1_id: { id: player1_id },
+            player2_id: { id: player2_id },
+            game_type: type === "ai" ? GameType.AI : GameType.PVP,
+            player1_score: player1_score,
+            player2_score: player2_score,
 
-
-export function startGame(ws: WebSocket, playerId: number | null) {
-    if (!gameRoomMap.has(ws)) {
-        gameRoomMap.set(ws, new GameRoom(ws, playerId))
-    }
-    const room = gameRoomMap.get(ws)
-    if (room) {
-        room.resetGame()
-        room.startGame()
+        })
+        return (await repository.save(game)).id
     } else {
-        new Error("Game room not found")
+        const game = repository.create({
+            player1_id: { id: player1_id },
+            game_type: type === "ai" ? GameType.AI : GameType.PVP,
+            player1_score: player1_score,
+            player2_score: player2_score,
+
+        })
+        return (await repository.save(game)).id
     }
-    return room
 }
 
-export function madeStep(ws: WebSocket, event: Event) {
-    const gameRoom = gameRoomMap.get(ws)
-    if (!gameRoom) {
-        new Error("Game room not found")
+export async function finishGame(whoWin_id: number, game_id: number) {
+    const repository = AppDataSource.getRepository(Games)
+    const game = await repository.findOneBy({ id: game_id })
+    if (game) {
+        game.status = STATUS.FINISHED
+        if (whoWin_id !== 0) {
+            game.winner_id = { id: whoWin_id } as Users
+        }
+        game.ended_at = new Date()
+        repository.save(game)
     }
-    gameRoom?.madeStep(event)
-
 }
 
-export function deleteRoom(ws: WebSocket){
-    gameRoomMap.delete(ws)
+export async function abandonedGame(game_id: number) {
+    const repository = AppDataSource.getRepository(Games)
+    const game = await repository.findOneBy({ id: game_id })
+    if (game && game.status !== STATUS.FINISHED) {
+        game.status = STATUS.ABANDONED
+        game.ended_at = new Date()
+        repository.save(game)
+    }
 }
 
+export async function madeStep(game_id: number, player_id: number, event: "take" | "pass", stepCount: number, score: number, card?: string) {
+    const repository = AppDataSource.getRepository(GameMoves)
+    const move = await repository.create({
+        game_id: { id: game_id },
+        action: event == "take" ? ACTION.TAKE : ACTION.PASS,
+        point_after_move: score,
+        step_number: stepCount,
+        player_id: player_id !== 0 ? { id: player_id } : undefined,
+        card_drawn: event === "take" ? card : undefined
+    })
+    repository.save(move)
+}

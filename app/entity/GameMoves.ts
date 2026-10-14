@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, JoinColumn, ManyToMany, ManyToO
 import {Users} from "./Users"
 import {Games} from "./Games"
 
-export enum Action {
+export enum ACTION {
     TAKE = "take",
     PASS = "pass",
 }
@@ -23,10 +23,10 @@ export class GameMoves {
     @Column({type: "integer", default: 0})
     step_number!: number
 
-    @Column({type: "enum", enum: Action})
-    action!: Action
+    @Column({type: "enum", enum: ACTION})
+    action!: ACTION
 
-    @Column({type: "varchar", length: 20})
+    @Column({type: "varchar", length: 20, nullable: true})
     card_drawn!: string
 
     @Column({type: "integer"})

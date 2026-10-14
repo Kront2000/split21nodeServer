@@ -1,20 +1,24 @@
 import * as jwt from '../authorization/jwt.service'
 import { Users } from "../../entity/Users"
 import AppDataSource from "../../AppDataSource"
+import { UserStats } from '../../entity/UserStats'
 
-// export async function getUserData(id: number) {
-//     const resp = await AppDataSource.getRepository(Users).findOne({
-//         where: {
-//             id: id
-//         },
-//         select: {
-//             login: true,
-//             score: true,
-//             id: true
-//         }
-//     })
-//     return resp
-// }
+export async function getUserData(id: number) {
+    const resp = await AppDataSource.getRepository(Users).findOne({
+        where: {
+            id: id
+        },
+        select: {
+            login: true,
+            user_stats: true,
+            id: true
+        },
+        relations: {
+            user_stats: true
+        }
+    })
+    return resp
+}
 
 export async function getUserByLogin(login: string) {
     const resp = await AppDataSource.getRepository(Users).findOne({
@@ -23,66 +27,94 @@ export async function getUserByLogin(login: string) {
     return resp
 }
 
-// export async function getScoreById(id: number) {
-//     const resp = await AppDataSource.getRepository(Users).findOne({
-//         where: { id: id },
-//     })
-//     if (resp) {
-//         return resp.score
-//     } else {
-//         return null
-//     }
-// }
+export async function getRatingById(id: number, typeOfRating: "ai" | "pvp") {
+    const resp = await AppDataSource.getRepository(UserStats).findOne({
+        where: { id: id },
+    })
+    if (resp && typeOfRating == "ai") {
+        return resp.rating_ai
+    } else if (resp && typeOfRating == "pvp")
+        return resp?.rating_pvp
+    else {
+        return null
+    }
+}
 
-// export async function getTop10() {
-//     const resp = await AppDataSource.getRepository(Users).find({
-//         order: {
-//             score: 'DESC'
-//         },
-//         select: {
-//             id: true,
-//             login: true,
-//             score: true
-//         },
-//         take: 10
-//     })
-//     return resp
-// }
+export async function getTop10(typeOfRating: "ai" | "pvp") {
+    if (typeOfRating === "ai") {
+        const resp = await AppDataSource.getRepository(UserStats).find({
+            order: {
+                rating_ai: 'DESC'
+            },
+            select: {
+                id: true,
+                rating_ai: true,
+                users: {
+                    login: true
+                }
+            },
+            take: 10
+        })
+        return resp
+    } else {
+        const resp = await AppDataSource.getRepository(UserStats).find({
+            order: {
+                rating_pvp: 'DESC'
+            },
+            select: {
+                id: true,
+                rating_ai: true,
+                users: {
+                    login: true
+                }
+            },
+            take: 10
+        })
+        return resp
+    }
+}
 
-// export async function createUser(login: string, password: string, score: number = 0) {
-//     const user = new Users()
-//     user.login = login
-//     user.password = jwt.hashPassword(password)
-//     user.score = score
-//     try {
-//         const result = await AppDataSource.manager.save(user)
-//         console.log(result)
-//         return result 
-//     } catch (err: any) {
-//         if (err.code === '23505') {
-//             return null
-//         } else {
-//             throw err
-//         }
-//     }
-// }
+export async function createUser(login: string, password: string) {
+    try {
+        return await AppDataSource.transaction(async (manager) => {
+            const user = manager.create(Users, {
+                login: login,
+                password: jwt.hashPassword(password)
+            })
+            await manager.save(user)
 
-// export async function incrementScoreById(id: number) {
-//     try {
-//         const resp = await AppDataSource.manager.update(Users, { id: id }, { score: () => "score + 1" })
-//         return resp
-//     } catch (err) {
-//         return null
-//     }
-// }
+            const user_stats = manager.create(UserStats, {
+                id: user.id,
+            })
+            await manager.save(user_stats)
+            return user
+        })
+    
+    } catch (err: any) {
+        if (err.code === '23505') {
+            return null
+        } else {
+            throw err
+        }
+    }
+}
 
-// export async function clearScoreById(id: number) {
-//     try {
-//         const resp = AppDataSource.manager.update(Users, { id: id }, { score: 0 })
-//         return resp
-//     } catch (err) {
-//         return null
-//     }
-// }
+export async function setRatingById(id: number, value: number, typeOfRating: "ai" | "pvp") {
+    try {
+        const resp = await AppDataSource.manager.update(UserStats, { id: id }, { rating_ai: value })
+        return resp
+    } catch (err) {
+        return null
+    }
+}
+
+
+export function calculatePoints(
+  points: number,
+  isWinner: boolean
+): number {
+    let result = isWinner ? points += 5 : points -=10 
+    return result >= 0 ? result : 0
+}
 
 

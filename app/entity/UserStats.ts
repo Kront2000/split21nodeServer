@@ -1,8 +1,8 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn, Relation } from "typeorm"
+import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn, Relation, PrimaryColumn } from "typeorm"
 import {Users} from "./Users"
 @Entity()
 export class UserStats {
-    @PrimaryGeneratedColumn()
+    @PrimaryColumn({type: "integer"})
     id!: number
 
     @Column({type: "integer", default: 0})
