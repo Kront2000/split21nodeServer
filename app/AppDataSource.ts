@@ -16,7 +16,7 @@ const AppDataSource = new DataSource({
     database: process.env.DATABASE,
     entities: [Users, Games, GameMoves, UserStats],
     synchronize: true,
-    logging: ["query", "error", "schema"],
+    logging: false,
     ssl: {
         rejectUnauthorized: false
     },

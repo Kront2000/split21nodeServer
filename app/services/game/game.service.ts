@@ -6,26 +6,16 @@ import { Users } from "../../entity/Users"
 
 export async function createGame(player1_id: number, player2_id: number, type: "ai" | "pvp", player1_score: number, player2_score: number) {
     const repository = AppDataSource.getRepository(Games)
-    if (player2_id !== 0) {
-        const game = repository.create({
-            player1_id: { id: player1_id },
-            player2_id: { id: player2_id },
-            game_type: type === "ai" ? GameType.AI : GameType.PVP,
-            player1_score: player1_score,
-            player2_score: player2_score,
+    const game = repository.create({
+        player1_id: player1_id !== 0 ? { id: player1_id } : undefined,
+        player2_id: player2_id !== 0 ? { id: player2_id } : undefined,
+        game_type: type === "ai" ? GameType.AI : GameType.PVP,
+        player1_score: player1_score,
+        player2_score: player2_score,
 
-        })
-        return (await repository.save(game)).id
-    } else {
-        const game = repository.create({
-            player1_id: { id: player1_id },
-            game_type: type === "ai" ? GameType.AI : GameType.PVP,
-            player1_score: player1_score,
-            player2_score: player2_score,
+    })
+    return (await repository.save(game)).id
 
-        })
-        return (await repository.save(game)).id
-    }
 }
 
 export async function finishGame(whoWin_id: number, game_id: number) {

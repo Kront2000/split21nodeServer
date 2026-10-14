@@ -1,7 +1,8 @@
 import WebSocket, { WebSocketServer } from 'ws';
-import * as aiGameService from "../services/game/ai.game.service"
+import { aiGameSerice, AiGameService } from "../services/game/ai.game.service"
 import * as jwt from "./../services/authorization/jwt.service"
 import { server } from './../main'
+import { PVPGameService, pvpGameService } from '../services/game/pvp.game.service';
 
 function onSocketError(err: any) {
   console.error(err);
@@ -42,32 +43,22 @@ export function startWebSocket() {
       roomId = Number.isInteger(parsedRoomId) ? parsedRoomId : null;
     }
 
+    let service: AiGameService | PVPGameService
+
     if (gameType === "ai") {
-      aiGameService.createGame(ws, playerId)
+      service = aiGameSerice
+      service.createGame(ws, playerId)
+    } else if (gameType === "pvp"){
+      service = pvpGameService
+      service.findGame(ws, playerId)
     }
 
-    ws.send(JSON.stringify({ whoseTurn: "start" }))
-
     ws.on('message', (message) => {
-      try {
-        const parsedMessage = JSON.parse(String(message))
-        if (!parsedMessage.event) {
-          throw Error("invalidate data")
-        }
-        if (parsedMessage.event === "start") {
-          aiGameService.startGame(ws)
-          console.log("Партия начата")
-        } else {
-          aiGameService.madeStep(ws, parsedMessage.event)
-          console.log("Сделан ход")
-        }
-      } catch (err) {
-        console.log(err)
-      }
+      service.onMessage(message, ws)
     });
 
     ws.on('close', () => {
-      aiGameService.deleteRoom(ws)
+      service.onClose(ws)
     });
   });
 
