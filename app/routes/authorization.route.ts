@@ -13,7 +13,7 @@ authRoute.post("/register", async (req, res) => {
         } else if (!req.body.login || req.body.login.length < 4) {
             res.status(400)
             return res.end("The login is missing or shorter than 4 characters")
-        } else if (!req.body.password || req.body.login.length < 8) {
+        } else if (!req.body.password || req.body.password.length < 8) {
             res.status(400)
             return res.end("Password is missing or less than 8 characters long")
         } 

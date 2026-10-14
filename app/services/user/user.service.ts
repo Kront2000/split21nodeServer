@@ -1,68 +1,97 @@
-import { prisma } from './../../lib/prisma'
 import * as jwt from '../authorization/jwt.service'
+import { Users } from "../../entity/Users"
+import AppDataSource from "../../AppDataSource"
+import { UserStats } from '../../entity/UserStats'
 
 export async function getUserData(id: number) {
-    const resp = await prisma.users.findUnique({
-        where: {id: id},
+    const resp = await AppDataSource.getRepository(Users).findOne({
+        where: {
+            id: id
+        },
         select: {
-            id: true,
             login: true,
-            score: true
+            user_stats: true,
+            id: true
+        },
+        relations: {
+            user_stats: true
         }
     })
     return resp
 }
 
 export async function getUserByLogin(login: string) {
-    const resp = await prisma.users.findUnique({
+    const resp = await AppDataSource.getRepository(Users).findOne({
         where: { login: login }
     })
     return resp
 }
 
-export async function getScoreById(id: number) {
-    const resp = await prisma.users.findUnique({
+export async function getRatingById(id: number, typeOfRating: "ai" | "pvp") {
+    const resp = await AppDataSource.getRepository(UserStats).findOne({
         where: { id: id },
     })
-    if(resp){
-        return resp.score
-    }else{
+    if (resp && typeOfRating == "ai") {
+        return resp.rating_ai
+    } else if (resp && typeOfRating == "pvp")
+        return resp?.rating_pvp
+    else {
         return null
     }
 }
 
-export async function getTop10() {
-    const resp = await prisma.users.findMany({
-        orderBy: {
-            score: 'desc'
-        },
-        select: {
-            id: true,
-            login: true,
-            score: true
-        },
-        take: 10
-    })
-    return resp
-}
-
-export async function createUser(login: string, password: string, score: number = 0) {
-    try {
-        return await prisma.users.create({
-            data: {
-                login: login,
-                password: jwt.hashPassword(password),
-                score: score
+export async function getTop10(typeOfRating: "ai" | "pvp") {
+    if (typeOfRating === "ai") {
+        const resp = await AppDataSource.getRepository(UserStats).find({
+            order: {
+                rating_ai: 'DESC'
             },
             select: {
                 id: true,
-                login: true,
-                score: true
-            }
-
+                rating_ai: true,
+                users: {
+                    login: true
+                }
+            },
+            take: 10
         })
+        return resp
+    } else {
+        const resp = await AppDataSource.getRepository(UserStats).find({
+            order: {
+                rating_pvp: 'DESC'
+            },
+            select: {
+                id: true,
+                rating_ai: true,
+                users: {
+                    login: true
+                }
+            },
+            take: 10
+        })
+        return resp
+    }
+}
+
+export async function createUser(login: string, password: string) {
+    try {
+        return await AppDataSource.transaction(async (manager) => {
+            const user = manager.create(Users, {
+                login: login,
+                password: jwt.hashPassword(password)
+            })
+            await manager.save(user)
+
+            const user_stats = manager.create(UserStats, {
+                id: user.id,
+            })
+            await manager.save(user_stats)
+            return user
+        })
+    
     } catch (err: any) {
-        if (err.code === 'P2002') {
+        if (err.code === '23505') {
             return null
         } else {
             throw err
@@ -70,38 +99,22 @@ export async function createUser(login: string, password: string, score: number 
     }
 }
 
-export async function incrementScoreById(id: number) {
-    try{
-        const resp = await prisma.users.update({
-            where: {id: id},
-            data: {score: {increment: 1}},
-            select: {
-                login: true,
-                id: true,
-                score: true
-            }
-        })
+export async function setRatingById(id: number, value: number, typeOfRating: "ai" | "pvp") {
+    try {
+        const resp = await AppDataSource.manager.update(UserStats, { id: id }, { rating_ai: value })
         return resp
-    }catch(err){
+    } catch (err) {
         return null
     }
 }
 
-export async function clearScoreById(id: number) {
-    try{
-        const resp = await prisma.users.update({
-            where: {id: id},
-            data: {score: 0},
-            select: {
-                login: true,
-                id: true,
-                score: true
-            }
-        })
-        return resp
-    }catch(err){
-        return null
-    }
+
+export function calculatePoints(
+  points: number,
+  isWinner: boolean
+): number {
+    let result = isWinner ? points += 5 : points -=10 
+    return result >= 0 ? result : 0
 }
 
 

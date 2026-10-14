@@ -1,10 +1,20 @@
 import express from 'express'
+import "reflect-metadata"
 import { authRoute } from './routes/authorization.route.js'
 import { enemyRoute } from './routes/enemy.route'
 import { startWebSocket } from './routes/webSocket.js'
 import { userRoutes } from './routes/user.route'
 import cookieParser from 'cookie-parser'
 import http from 'http'
+import AppDataSource from './AppDataSource.js'
+
+try {
+    await AppDataSource.initialize()
+    console.log("Data base initialized")
+} catch (error) {
+    console.log(error)
+    process.exit(1)
+}
 
 const app = express()
 const PORT = 8080
