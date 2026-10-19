@@ -1,22 +1,28 @@
 import { Event } from "./AiGameRoom"
 import WebSocket from "ws";
-import GameRoom from "./AiGameRoom";
+import AiGameRoom from "./AiGameRoom";
 
-export const gameRoomMap = new Map<WebSocket, GameRoom>()
+export const gameRoomMap = new Map<WebSocket, AiGameRoom>()
 
 export class AiGameService {
     static instance: AiGameService
-    gameRoomMap = new Map<WebSocket, GameRoom>()
+    gameRoomMap = new Map<WebSocket, AiGameRoom>()
 
-    constructor(){
-        if(AiGameService.instance){
+    constructor() {
+        if (AiGameService.instance) {
             return AiGameService.instance
         }
         AiGameService.instance = this
     }
 
-    onConnect(ws: WebSocket, player1_Id: number | null){
-        ws.send(JSON.stringify({ whoseTurn: "start" }))
+    onConnect(ws: WebSocket, player1_Id: number | null) {
+        setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                this.createGame(ws, player1_Id)
+                ws.send(JSON.stringify({ info: "enemy is founded", whoseTurn: "start" }))
+            }
+        }, 1000)
+
     }
 
     onMessage(message: WebSocket.RawData, ws: WebSocket) {
@@ -26,8 +32,14 @@ export class AiGameService {
                 throw Error("invalidate data")
             }
             if (parsedMessage.event === "start") {
-                this.startGame(ws)
-                console.log("Партия начата")
+                console.log("Start")
+                const gameRoom = this.gameRoomMap.get(ws)
+                if (gameRoom) {
+                    gameRoom.playerIsReady()
+                    console.log("start start")
+                } else {
+                    console.log(this.gameRoomMap)
+                }
             } else {
                 this.madeStep(ws, parsedMessage.event)
                 console.log("Сделан ход")
@@ -37,22 +49,23 @@ export class AiGameService {
         }
     }
 
-    onClose(ws: WebSocket){
+    onClose(ws: WebSocket) {
         this.deleteRoom(ws)
     }
 
     createGame(ws: WebSocket, playerId: number | null) {
         if (!this.gameRoomMap.has(ws)) {
-            this.gameRoomMap.set(ws, new GameRoom(ws, playerId))
+            this.gameRoomMap.set(ws, new AiGameRoom(ws, playerId))
         }
-        const room = gameRoomMap.get(ws)
+        const room = this.gameRoomMap.get(ws)
         if (room) {
             room.resetGame()
+            console.log("Партия создана в базе данных")
             ws.send(JSON.stringify({ info: "game is created" }))
         } else {
             new Error("Game room not found")
         }
-        console.log("Партия создана в базе данных")
+        
         return room
     }
 
@@ -77,6 +90,7 @@ export class AiGameService {
     }
 
     deleteRoom(ws: WebSocket) {
+        console.log("delete room")
         const gameRoom = this.gameRoomMap.get(ws)
         if (!gameRoom) {
             new Error("Game room not found")

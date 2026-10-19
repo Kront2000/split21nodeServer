@@ -4,7 +4,7 @@ import { deck } from './gameConsts'
 import getAction from "../getAction.service";
 import * as userService from '../user/user.service'
 import * as gameService from './game.service'
-import { gameRoomMap } from './ai.game.service';
+import { PVPGameService, pvpGameService } from "./pvp.game.service";
 
 
 
@@ -61,6 +61,7 @@ export default class AiGameRoom {
         this.ws2 = ws2
         this.player1_Id = player1_Id ? player1_Id : 0
         this.player2_Id = player2_Id ? player2_Id : 0
+        console.log("Комната создана. player1_id: " + player1_Id + " player2_Id: " + player2_Id + "Кол-во комнат: " + PVPGameService.instance.gameRoomMap.size)
     }
 
     playerIsReady(ws: WebSocket) {
@@ -83,6 +84,8 @@ export default class AiGameRoom {
 
     closeGame() {
         gameService.abandonedGame(this.gameId)
+        this.send({info: "game over"}, 'player1')
+        this.send({info: "game over"}, 'player2')
     }
 
     resetGame() {
@@ -120,8 +123,7 @@ export default class AiGameRoom {
                 })
             } else {
                 this.send({
-                    enemyName: "Гость",
-                    enemyRating: (this.ratingPlayer1BeforeGame).toString()
+                    enemyName: "Guest",
                 }, "player2")
             }
 
@@ -134,8 +136,7 @@ export default class AiGameRoom {
                 })
             } else {
                 this.send({
-                    enemyName: "Гость",
-                    enemyRating: (this.ratingPlayer1BeforeGame).toString()
+                     enemyName: "Guest",
                 }, "player1")
             }
 
@@ -143,8 +144,6 @@ export default class AiGameRoom {
             let card = this.player2TakeCard();
             this.setHistoryOfGame("Начало игры");
             this.setHistoryOfGame(`Игрок 2 получил - ${card.name} ${card.suit}`)
-
-
 
             card = this.player1TakeCard();
 
@@ -255,8 +254,9 @@ export default class AiGameRoom {
             const card = this.player1TakeCard()
             this.send({ takeCard: card, userDeck: this.cardsOfPlayer1, }, "player1")
             this.setHistoryOfGame("Игрок 1 взял карту")
-            if (this.player1_Id > 21) {
+            if (this.valueOfPlayer1Deck > 21) {
                 this.setHistoryOfGame("Игрок 1 набрал больше 21-го очка. Игрок проиграл")
+                console.log("21")
                 this.win("player2");
                 this.send({ win: "enemy", winMessage: "Вы набрали больше 21-го очка. Вы проиграли :(" }, "player1")
                 this.send({ win: "user", winMessage: "Противник набрал больше 21-го очка. Вы выйграли!! :)" }, "player2")
@@ -311,7 +311,7 @@ export default class AiGameRoom {
             const card = this.player2TakeCard()
             this.send({ takeCard: card, userDeck: this.cardsOfPlayer2, }, "player2")
             this.setHistoryOfGame("Игрок 2 взял карту")
-            if (this.player2_Id > 21) {
+            if (this.valueOfPlayer2Deck > 21) {
                 this.setHistoryOfGame("Игрок 2 набрал больше 21-го очка. Игрок 2 проиграл")
                 this.win("player1");
                 this.send({ win: "enemy", winMessage: "Вы набрали больше 21-го очка. Вы проиграли :(" }, "player2")

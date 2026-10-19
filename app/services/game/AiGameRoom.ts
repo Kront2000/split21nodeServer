@@ -50,6 +50,7 @@ export default class AiGameRoom {
         this.mainDeck = deck
         this.ws = ws
         this.playerId = playerId
+        console.log("room is created")
     }
 
     get valueOfEnemyDeck() {
@@ -61,6 +62,10 @@ export default class AiGameRoom {
 
     closeGame() {
         gameService.abandonedGame(this.gameId)
+    }
+
+    playerIsReady() {
+        this.startGame()
     }
 
     resetGame() {

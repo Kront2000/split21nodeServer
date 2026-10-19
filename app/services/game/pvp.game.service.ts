@@ -22,8 +22,16 @@ export class PVPGameService {
     }
 
     onConnect(ws: WebSocket, player_Id: number | null) {
-        ws.send(JSON.stringify({ whoseTurn: "start", info: "finding enemy" }))
-        this.findGame(ws, player_Id)
+        console.log("соединение какоето")
+        setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                this.findGame(ws, player_Id)
+                ws.send(JSON.stringify({ whoseTurn: "start", info: "finding enemy" }))
+                console.log("А вот теперь пойдёт")
+            } else {
+                console.log("Хуй там плавал")
+            }
+        }, 1000)
         console.log("player is connected")
     }
 
@@ -54,29 +62,25 @@ export class PVPGameService {
 
     onClose(ws: WebSocket) {
         this.playerQueue.forEach((value, key) => {
-            if (value.ws === ws){
+            if (value.ws === ws) {
                 console.log(this.playerQueue)
                 this.playerQueue.splice(key, 1)
                 console.log(this.playerQueue)
                 return
             }
         })
-        
         this.deleteRoom(ws)
     }
 
     findGame(ws: WebSocket, player_id: number | null) {
         if (this.playerQueue.length === 0) {
             this.playerQueue.push({ ws: ws, player_id: player_id ? player_id : undefined })
-            console.log("Добавили в очередь")
-            console.log(this.playerQueue)
+            console.log("Кол-во игроков в очереди" + this.playerQueue.length)
         } else {
             const player2 = this.playerQueue.shift()
             if (player2) {
                 this.gameRoomMap.set([ws, player2.ws], new PVPGameRoom(ws, player_id, player2.ws, player2.player_id ?? null))
-                console.log(this.playerQueue)
-                console.log("Очередь после того как нашли пользователя")
-                console.log(ws === player2.ws)
+                console.log("Кол-во игроков в очереди" + this.playerQueue.length)
                 ws.send(JSON.stringify({ info: "enemy is founded", whoseTurn: "start" }))
                 player2.ws.send(JSON.stringify({ info: "enemy is founded", whoseTurn: "start" }))
             } else {

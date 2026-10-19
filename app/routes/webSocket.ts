@@ -47,10 +47,10 @@ export function startWebSocket() {
 
     if (gameType === "ai") {
       service = aiGameSerice
-      service.createGame(ws, playerId)
+      service.onConnect(ws, playerId)
     } else if (gameType === "pvp"){
       service = pvpGameService
-      service.findGame(ws, playerId)
+      service.onConnect(ws, playerId)
     }
 
     ws.on('message', (message) => {
