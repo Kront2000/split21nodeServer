@@ -27,6 +27,6 @@ export class UserStats {
     updated_at!: Date
 
     @OneToOne(() => Users, (users) => users.user_stats)
-    @JoinColumn({ name: "user_id" })
+    @JoinColumn({ name: "id", referencedColumnName: "id" })
     users!: Relation<Users>
 }

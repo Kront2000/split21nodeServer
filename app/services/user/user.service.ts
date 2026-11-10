@@ -43,6 +43,9 @@ export async function getRatingById(id: number, typeOfRating: "ai" | "pvp") {
 export async function getTop10(typeOfRating: "ai" | "pvp") {
     if (typeOfRating === "ai") {
         const resp = await AppDataSource.getRepository(UserStats).find({
+            relations: {
+                users: true,
+            },
             order: {
                 rating_ai: 'DESC'
             },
@@ -58,12 +61,15 @@ export async function getTop10(typeOfRating: "ai" | "pvp") {
         return resp
     } else {
         const resp = await AppDataSource.getRepository(UserStats).find({
+            relations: {
+                users: true,
+            },
             order: {
                 rating_pvp: 'DESC'
             },
             select: {
                 id: true,
-                rating_ai: true,
+                rating_pvp: true,
                 users: {
                     login: true
                 }
@@ -89,7 +95,7 @@ export async function createUser(login: string, password: string) {
             await manager.save(user_stats)
             return user
         })
-    
+
     } catch (err: any) {
         if (err.code === '23505') {
             return null
@@ -100,20 +106,36 @@ export async function createUser(login: string, password: string) {
 }
 
 export async function setRatingById(id: number, value: number, typeOfRating: "ai" | "pvp") {
-    try {
-        const resp = await AppDataSource.manager.update(UserStats, { id: id }, { rating_ai: value })
-        return resp
-    } catch (err) {
-        return null
+    if (typeOfRating == "ai") {
+        try {
+            const resp = await AppDataSource.manager.update(UserStats, { id: id }, { rating_ai: value })
+            console.log("yes")
+            console.log(resp)
+            return resp
+        } catch (err) {
+            return null
+        }
+    } else {
+        console.log("try")
+        try {
+            const resp = await AppDataSource.manager.update(UserStats, { id: id }, { rating_pvp: value })
+            console.log(id)
+            console.log(value)
+            console.log(resp)
+            return resp
+        } catch (err) {
+            return null
+        }
     }
+
 }
 
 
 export function calculatePoints(
-  points: number,
-  isWinner: boolean
+    points: number,
+    isWinner: boolean
 ): number {
-    let result = isWinner ? points += 5 : points -=10 
+    let result = !isWinner ? points += 5 : points -= 10
     return result >= 0 ? result : 0
 }
 

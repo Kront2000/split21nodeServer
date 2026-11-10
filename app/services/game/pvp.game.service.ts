@@ -63,13 +63,29 @@ export class PVPGameService {
     onClose(ws: WebSocket) {
         this.playerQueue.forEach((value, key) => {
             if (value.ws === ws) {
-                console.log(this.playerQueue)
                 this.playerQueue.splice(key, 1)
-                console.log(this.playerQueue)
                 return
             }
         })
-        this.deleteRoom(ws)
+
+        let gameRoom: PVPGameRoom | null = null
+        let key: WebSocket[] | null = null
+        for (let arr of this.gameRoomMap) {
+            if (arr[0].includes(ws)) {
+                gameRoom = arr[1]
+                key = arr[0]
+            }
+        }
+        if (!gameRoom || !key) {
+            new Error("Game room not found")
+        } else if(gameRoom?.hasEnded) {
+            gameRoom?.closeGame()
+            this.gameRoomMap.delete(key)
+        } else{
+            gameRoom?.playerDicsonected()
+            this.gameRoomMap.delete(key)
+        }
+        
     }
 
     findGame(ws: WebSocket, player_id: number | null) {
@@ -100,23 +116,6 @@ export class PVPGameService {
             new Error("Game room not found")
         }
         gameRoom?.madeStep(event, ws)
-    }
-
-    deleteRoom(ws: WebSocket) {
-        let gameRoom: PVPGameRoom | null = null
-        let key: WebSocket[] | null = null
-        for (let arr of this.gameRoomMap) {
-            if (arr[0].includes(ws)) {
-                gameRoom = arr[1]
-                key = arr[0]
-            }
-        }
-        if (!gameRoom || !key) {
-            new Error("Game room not found")
-        } else {
-            gameRoom?.closeGame()
-            this.gameRoomMap.delete(key)
-        }
     }
 }
 

@@ -4,6 +4,7 @@ import { authRoute } from './routes/authorization.route.js'
 import { enemyRoute } from './routes/enemy.route'
 import { startWebSocket } from './routes/webSocket.js'
 import { userRoutes } from './routes/user.route'
+import { storiesRoute } from './routes/stories.route.js'
 import cookieParser from 'cookie-parser'
 import http from 'http'
 import AppDataSource from './AppDataSource.js'
@@ -37,6 +38,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/stories', storiesRoute)
 app.use('/enemy', enemyRoute)
 app.use('/auth', authRoute)
 app.use('/user', userRoutes)

@@ -33,7 +33,7 @@ type WhoseTurnEnum = 'player1' | 'player2'
 
 export type Event = "take" | "pass"
 
-export default class AiGameRoom {
+export default class PVPGameRoom {
     ws1: WebSocket
     ws2: WebSocket
     player1_Id: number = 0
@@ -54,6 +54,7 @@ export default class AiGameRoom {
     ratingPlayer2BeforeGame: number = 0
     player1_isReady: boolean = false
     player2_isReady: boolean = false
+    hasEnded = false
 
     constructor(ws1: WebSocket, player1_Id: number | null = null, ws2: WebSocket, player2_Id: number | null) {
         this.mainDeck = deck
@@ -79,14 +80,25 @@ export default class AiGameRoom {
         return this.cardsOfPlayer1.reduce((prev, curr) => { return prev += curr.value }, 0)
     }
     get valueOfPlayer2Deck() {
-        return this.cardsOfPlayer1.reduce((prev, curr) => { return prev += curr.value }, 0)
+        return this.cardsOfPlayer2.reduce((prev, curr) => { return prev += curr.value }, 0)
     }
 
     closeGame() {
-        gameService.abandonedGame(this.gameId)
-        this.send({info: "game over"}, 'player1')
-        this.send({info: "game over"}, 'player2')
+        if (!this.hasEnded) {
+            this.send({ info: "game over" }, 'player1')
+            this.send({ info: "game over" }, 'player2')
+        }
     }
+
+    playerDicsonected(){
+        if (!this.hasEnded) {
+            gameService.abandonedGame(this.gameId)
+            this.send({ info: "enemy dicsonected" }, 'player1')
+            this.send({ info: "enemy dicsonected" }, 'player2')
+        }
+    }
+
+
 
     resetGame() {
         this.hasStart = false
@@ -136,7 +148,7 @@ export default class AiGameRoom {
                 })
             } else {
                 this.send({
-                     enemyName: "Guest",
+                    enemyName: "Guest",
                 }, "player1")
             }
 
@@ -169,7 +181,7 @@ export default class AiGameRoom {
         const card = this.mainDeck[index]
         this.addCardToPlayer1Deck(this.mainDeck[index]);
         this.mainDeck.splice(index, 1)
-        if (this.player1_Id) {
+        if (this.player1_Id || this.player2_Id) {
             gameService.madeStep(this.gameId, 0, "take", this.stepCount, this.valueOfPlayer1Deck, card.name + " " + card.suit)
         }
         this.stepCount += 1
@@ -181,7 +193,7 @@ export default class AiGameRoom {
         const card = this.mainDeck[index]
         this.addCardToPlayer2Deck(this.mainDeck[index]);
         this.mainDeck.splice(index, 1)
-        if (this.player2_Id) {
+        if (this.player1_Id || this.player2_Id) {
             gameService.madeStep(this.gameId, 0, "take", this.stepCount, this.valueOfPlayer2Deck, card.name + " " + card.suit)
         }
         this.stepCount += 1
@@ -214,17 +226,18 @@ export default class AiGameRoom {
     }
 
     async win(who: "player1" | "player2" | "none") {
-        if (this.player1_Id && who == 'player2') {
-            userService.setRatingById(this.player1_Id, userService.calculatePoints(this.raitingOfPlayer1BeforeGame, false), "pvp")
+        this.hasEnded = true
+        if (this.player1_Id !== 0 && who == 'player2') {
+            userService.setRatingById(this.player1_Id,  userService.calculatePoints(this.raitingOfPlayer1BeforeGame, false), "pvp")
             gameService.finishGame(this.player2_Id, this.gameId)
-        } else if (this.player1_Id && who == 'player1') {
-            userService.setRatingById(this.player1_Id, userService.calculatePoints(this.raitingOfPlayer1BeforeGame, true), "pvp")
+        } else if (this.player1_Id !== 0 && who == 'player1') {
+            userService.setRatingById(this.player1_Id,  userService.calculatePoints(this.raitingOfPlayer1BeforeGame, true), "pvp")
             gameService.finishGame(this.player1_Id, this.gameId)
         }
-        if (this.player2_Id && who == 'player2') {
+        if (this.player2_Id !== 0 && who == 'player2') {
             userService.setRatingById(this.player2_Id, userService.calculatePoints(this.raitingOfPlayer2BeforeGame, false), "pvp")
             gameService.finishGame(this.player2_Id, this.gameId)
-        } else if (this.player1_Id && who == 'player1') {
+        } else if (this.player1_Id !== 0 && who == 'player1') {
             userService.setRatingById(this.player1_Id, userService.calculatePoints(this.raitingOfPlayer2BeforeGame, true), "pvp")
             gameService.finishGame(this.player1_Id, this.gameId)
         }
@@ -256,18 +269,12 @@ export default class AiGameRoom {
             this.setHistoryOfGame("Игрок 1 взял карту")
             if (this.valueOfPlayer1Deck > 21) {
                 this.setHistoryOfGame("Игрок 1 набрал больше 21-го очка. Игрок проиграл")
-                console.log("21")
                 this.win("player2");
                 this.send({ win: "enemy", winMessage: "Вы набрали больше 21-го очка. Вы проиграли :(" }, "player1")
                 this.send({ win: "user", winMessage: "Противник набрал больше 21-го очка. Вы выйграли!! :)" }, "player2")
                 return;
             } else {
                 if (this.player2IsPass) {
-                    if (!this.player2IsPass && this.player1_Id) {
-                        gameService.madeStep(this.gameId, this.player2_Id, "pass", this.stepCount, this.valueOfPlayer2Deck)
-                        this.stepCount++
-                    }
-                    this.player2IsPass = true
                     this.send({ takeCard: card, userDeck: this.cardsOfPlayer1, countOfDeckEnemy: this.cardsOfPlayer2.length }, "player1")
                 } else {
                     this.setWhoseTurn("player2")
@@ -277,14 +284,14 @@ export default class AiGameRoom {
             }
 
         } else if (event == "pass") {
-            if (!this.player1IsPass && this.player1_Id) {
+            if (!this.player1IsPass && (this.player1_Id || this.player2_Id)) {
                 gameService.madeStep(this.gameId, this.player1_Id, "pass", this.stepCount, this.valueOfPlayer1Deck)
                 this.stepCount++
             }
             this.player1IsPass = true
             this.setHistoryOfGame("Игрок 1 пасс")
             if (this.player2IsPass) {
-                if (this.valueOfPlayer1Deck > this.cardsOfPlayer2.reduce((prev, curr) => { return prev += curr.value }, 0)) {
+                if (this.valueOfPlayer1Deck > this.valueOfPlayer2Deck) {
                     this.setHistoryOfGame("Игрок 1 набрал больше очков чем игрок 2. Игрок 1 выйграл")
                     this.win("player1")
                     this.send({ win: "user", winMessage: "Вы набрали больше очков чем противник. Вы выйграли :)" }, "player1")
@@ -319,11 +326,6 @@ export default class AiGameRoom {
                 return;
             } else {
                 if (this.player1IsPass) {
-                    if (!this.player1IsPass && this.player2_Id) {
-                        gameService.madeStep(this.gameId, this.player1_Id, "pass", this.stepCount, this.valueOfPlayer1Deck)
-                        this.stepCount++
-                    }
-                    this.player1IsPass = true
                     this.send({ takeCard: card, userDeck: this.cardsOfPlayer2, countOfDeckEnemy: this.cardsOfPlayer1.length }, "player2")
                 } else {
                     this.setWhoseTurn("player1")
@@ -333,14 +335,14 @@ export default class AiGameRoom {
             }
 
         } else if (event == "pass") {
-            if (!this.player2IsPass && this.player2_Id) {
+            if (!this.player2IsPass && (this.player2_Id || this.player1_Id)) {
                 gameService.madeStep(this.gameId, this.player2_Id, "pass", this.stepCount, this.valueOfPlayer2Deck)
                 this.stepCount++
             }
             this.player2IsPass = true
             this.setHistoryOfGame("Игрок 2 пасс")
             if (this.player1IsPass) {
-                if (this.valueOfPlayer2Deck > this.cardsOfPlayer1.reduce((prev, curr) => { return prev += curr.value }, 0)) {
+                if (this.valueOfPlayer2Deck > this.valueOfPlayer1Deck) {
                     this.setHistoryOfGame("Игрок 2 набрал больше очков чем игрок 1. Игрок 2 выйграл")
                     this.win("player2")
                     this.send({ win: "user", winMessage: "Вы набрали больше очков чем противник. Вы выйграли :)" }, "player2")
